@@ -9,72 +9,95 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(BASE_DIR, "..", ".."))
 
-DATA_PATH = os.path.join(PROJECT_ROOT, "data", "full_list_of_clean_flight_data.csv")
+DATA_PATH = os.path.join(PROJECT_ROOT, "data", "processed", "full_list_of_clean_flight_data.csv")
 MODEL_DIR = os.path.join(PROJECT_ROOT, "src", "model")
 
 os.makedirs(MODEL_DIR, exist_ok=True)
 
 # ===== LOAD DATA =====
 df = pd.read_csv(DATA_PATH)
-
 print("✅ Data loaded:", df.shape)
 
 # ===== CLEAN PRICE =====
-df['price'] = (
-    df['price']
+df["price"] = (
+    df["price"]
     .astype(str)
-    .str.replace(r'[^\d.,]', '', regex=True)
-    .str.replace(',', '.', regex=False)
+    .str.replace(r"[^\d.,]", "", regex=True)
+    .str.replace(",", ".", regex=False)
 )
+df["price"] = pd.to_numeric(df["price"], errors="coerce")
 
-df['price'] = pd.to_numeric(df['price'], errors='coerce')
-df.dropna(subset=['price'], inplace=True)
+# ===== CLEAN CATEGORICAL COLUMNS =====
+df["number_of_stops"] = df["number_of_stops"].replace("Cheapest direct", "1 stop")
+df["airline"] = df["airline"].astype(str).str.split(",").str[0].str.strip()
 
 # ===== DROP MISSING =====
-df.dropna(subset=[
-    'airline', 'number_of_stops', 'destination',
-    'origin', 'days_until_flight'
-], inplace=True)
-
-# ===== FEATURE ENGINEERING =====
-df['departure_hour'] = pd.to_datetime(df['departure_time'], errors='coerce').dt.hour
-
-df['departure_datetime'] = pd.to_datetime(
-    df['departure_date'] + ' 2025',
-    format='%d %b %Y',
-    errors='coerce'
+df.dropna(subset=["price"], inplace=True)
+df.dropna(
+    subset=[
+        "airline",
+        "number_of_stops",
+        "destination",
+        "origin",
+        "days_until_flight",
+        "departure_time",
+        "departure_date",
+    ],
+    inplace=True,
 )
 
-df['departure_weekday'] = df['departure_datetime'].dt.dayofweek
-df['is_weekend'] = df['departure_weekday'].isin([5, 6]).astype(int)
+# ===== FEATURE ENGINEERING =====
+df["departure_hour"] = pd.to_datetime(
+    df["departure_time"],
+    format="%H:%M",
+    errors="coerce",
+).dt.hour
 
-df.dropna(subset=['departure_hour', 'departure_weekday'], inplace=True)
+df["departure_datetime"] = pd.to_datetime(
+    df["departure_date"].astype(str) + " 2025",
+    format="%d %b %Y",
+    errors="coerce",
+)
+
+df["departure_weekday"] = df["departure_datetime"].dt.dayofweek
+df["is_weekend"] = df["departure_weekday"].isin([5, 6]).astype(int)
+
+df.dropna(subset=["departure_hour", "departure_weekday"], inplace=True)
 
 # ===== FEATURES =====
-X = pd.get_dummies(df[[
-    'airline', 'number_of_stops', 'destination', 'origin',
-    'days_until_flight', 'departure_hour',
-    'departure_weekday', 'is_weekend'
-]])
+X = pd.get_dummies(
+    df[
+        [
+            "airline",
+            "number_of_stops",
+            "destination",
+            "origin",
+            "days_until_flight",
+            "departure_hour",
+            "departure_weekday",
+            "is_weekend",
+        ]
+    ]
+)
 
-y = df['price']
+y = df["price"]
 
 # ===== NUMERIC TYPES =====
 numeric_cols = [
-    'days_until_flight',
-    'departure_hour',
-    'departure_weekday',
-    'is_weekend'
+    "days_until_flight",
+    "departure_hour",
+    "departure_weekday",
+    "is_weekend",
 ]
 
 for col in numeric_cols:
     if col in X.columns:
-        X[col] = X[col].astype('float64')
+        X[col] = X[col].astype("float64")
 
 # ===== SAVE FEATURE NAMES =====
 feature_names_path = os.path.join(MODEL_DIR, "feature_names.pkl")
 joblib.dump(X.columns.tolist(), feature_names_path)
-print("✅ Feature names saved")
+print(f"✅ Feature names saved to: {feature_names_path}")
 
 # ===== TRAIN TEST SPLIT =====
 X_train, X_test, y_train, y_test = train_test_split(
@@ -83,10 +106,10 @@ X_train, X_test, y_train, y_test = train_test_split(
 
 # ===== GRID SEARCH =====
 param_grid = {
-    'n_estimators': [100],
-    'max_depth': [10, None],
-    'min_samples_split': [2],
-    'min_samples_leaf': [1]
+    "n_estimators": [100],
+    "max_depth": [10, None],
+    "min_samples_split": [2],
+    "min_samples_leaf": [1],
 }
 
 rf = RandomForestRegressor(random_state=42)
@@ -95,13 +118,12 @@ grid_search = GridSearchCV(
     rf,
     param_grid=param_grid,
     cv=3,
-    scoring='r2',
+    scoring="r2",
     verbose=1,
-    n_jobs=-1
+    n_jobs=-1,
 )
 
 grid_search.fit(X_train, y_train)
-
 best_model = grid_search.best_estimator_
 
 # ===== EVALUATION =====
