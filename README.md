@@ -1,5 +1,6 @@
 # ✈️ Flight Price Estimator
 
+This project is an end-to-end machine learning application designed to predict flight ticket prices based on key travel attributes such as route, departure date, airline, and number of stops.
 ## Demo
 ![App Screenshot](webapp/static/app_screenshot.png)
 *Example prediction interface showing route selection and estimated flight price.*
@@ -10,11 +11,7 @@ After submitting the form, the application returns an estimated flight price:
 ![App Screenshot](webapp/static/example_prediction_output.png)
 Estimated price: **CHF 238.19**
 
-This project is an end-to-end machine learning application designed to predict flight ticket prices based on key travel attributes such as route, departure date, airline, and number of stops.
-
 The application allows users to input travel details and receive an estimated ticket price, simulating a real-world pricing assistant.
-
-This project was developed in collaboration with **Axelle Carnot**.
 
 ---
 
