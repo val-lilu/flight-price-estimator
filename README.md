@@ -3,6 +3,7 @@
 ## Demo
 
 ![App Screenshot](webapp/static/app_screenshot.png)
+*Example prediction interface showing route selection and estimated flight price.*
 
 This project is an end-to-end machine learning application designed to predict flight ticket prices based on key travel attributes such as route, departure date, airline, and number of stops.
 
